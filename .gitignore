@@ -1,0 +1,5 @@
+cookies.txt
+node_modules/
+.env
+.sessions.json
+

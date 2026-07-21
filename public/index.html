@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV2</title>
+  <meta name="description" content="TV2 — Televisão sincronizada com chat ao vivo">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="256x256" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css?v=2">
+  
+  <!-- Preload Assets to prevent blinking -->
+  <link rel="preload" href="/img/tv_frame.png?v=2" as="image">
+  <link rel="preload" href="/img/tv_frame_on.png?v=2" as="image">
+  <link rel="preload" href="/img/BtnOff.png?v=2" as="image">
+  <link rel="preload" href="/img/BtnOn.png?v=2" as="image">
+  <link rel="preload" href="/img/DialN.png?v=2" as="image">
+  <link rel="preload" href="/img/DialNE.png?v=2" as="image">
+  <link rel="preload" href="/img/DialE.png?v=2" as="image">
+  <link rel="preload" href="/img/DialSE.png?v=2" as="image">
+  <link rel="preload" href="/img/DialS.png?v=2" as="image">
+  <link rel="preload" href="/img/DialSW.png?v=2" as="image">
+  <link rel="preload" href="/img/DialW.png?v=2" as="image">
+  <link rel="preload" href="/img/DialNW.png?v=2" as="image">
+  <link rel="preload" href="/img/Flip_Chat_cropped.png" as="image">
+</head>
+<body>
+  <!-- MAIN LAYOUT -->
+  <main id="main">
+    <!-- TV AREA -->
+    <section id="tv-section">
+      <!-- TV Cabinet Wrapper -->
+      <div id="tv-cabinet-wrapper">
+        <div id="tv-cabinet">
+          <!-- TV Left Side: Screen Container -->
+          <div id="screen-container">
+            <div id="screen">
+              <div id="player-wrap">
+                <div id="yt-player"></div>
+              </div>
+
+              <!-- Glass overlay to block YT controls/hover -->
+              <div id="glass"></div>
+
+              <!-- CRT overlay effects -->
+              <div id="scanlines"></div>
+              <div id="crt-curve"></div>
+
+              <!-- Screen off overlay (starts visible, i.e., TV is off) -->
+              <div id="screen-off-overlay"></div>
+
+
+
+              <!-- Static/noise -->
+              <div id="static-overlay">
+                <canvas id="noise-canvas"></canvas>
+                <div id="static-text">SINTONIZANDO...</div>
+              </div>
+
+              <!-- On-Screen Display (OSD) -->
+              <div id="osd-display" class="show">
+                <div id="osd-channel">CH 01</div>
+              </div>
+
+              <!-- Volume OSD -->
+              <div id="osd-volume">
+                <span class="vol-label">VOL</span>
+                <div class="vol-bars">
+                  <div class="vol-bar"></div>
+                  <div class="vol-bar"></div>
+                  <div class="vol-bar"></div>
+                  <div class="vol-bar"></div>
+                  <div class="vol-bar"></div>
+                  <div class="vol-bar"></div>
+                </div>
+              </div>
+
+              <!-- Now playing -->
+              <div id="now-playing">
+                <div id="np-title-container">
+                  <div id="np-scroll-wrapper">
+                    <span class="np-label" id="np-label">▶ VOCÊ ESTÁ ASSISTINDO</span>
+                    <span id="np-title">—</span>
+                  </div>
+                </div>
+              </div>
+
+
+
+              <!-- Transition flash -->
+              <div id="transition-flash"></div>
+            </div>
+          </div>
+
+          <!-- TV Right Side: Physical Control Panel -->
+          <div id="control-panel">
+            <!-- Brand Logo plate -->
+            <div id="cabinet-logo">TV2</div>
+
+            <!-- Rotary Knobs -->
+            <div id="panel-knobs">
+              <div class="knob-container">
+                <span class="knob-label">VOL</span>
+                <div class="knob-wrap">
+                  <div class="knob" id="vol-knob" title="Rode o scroll do mouse para ajustar o volume"></div>
+                  <div class="knob-light"></div>
+                </div>
+              </div>
+              <div class="knob-container">
+                <span class="knob-label">CH</span>
+                <div class="knob-wrap">
+                  <div class="knob" id="ch-knob" title="Clique para mudar de canal" onclick="nextChannel()"></div>
+                  <div class="knob-light"></div>
+                </div>
+              </div>
+            </div>
+
+
+
+            <!-- Bottom Buttons (Power and Chat Toggle side-by-side) -->
+            <div id="panel-bottom-buttons">
+              <!-- CHAT button -->
+              <div class="control-row-half">
+                <span class="row-label">CHAT</span>
+                <button id="chat-toggle-push" class="tv-push-btn" onclick="toggleChat()" title="Ligar/Desligar chat"></button>
+              </div>
+              
+              <!-- POWER button -->
+              <div class="control-row-half" id="panel-power-half">
+                <span class="row-label">POWER</span>
+                <button id="power-push" class="tv-push-btn" onclick="togglePower()" title="Ligar/Desligar TV"></button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHAT AREA -->
+    <section id="chat-section" class="collapsed">
+      <div id="phone-wrapper">
+        <div id="phone-body">
+          <div id="phone-screen">
+            <div id="chat-header">
+              <div id="chat-header-title">
+                <span id="chat-channel-name">CHAT</span>
+                <span id="chat-viewer-count" title="Espectadores conectados" style="display: inline-flex; align-items: center;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px; display: inline-block;">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                  <span id="chat-viewer-count-number">00</span>
+                </span>
+              </div>
+              <div id="chat-auth-area">
+                <button id="google-login-btn" onclick="handleAuthClick()" title="Login com Google">Login</button>
+                <div id="chat-user-info" style="display:none" onclick="handleAuthClick()" title="Clique para sair">
+                  <img id="chat-user-avatar" src="" alt="user">
+                  <span id="chat-user-name"></span>
+                </div>
+              </div>
+            </div>
+            <div id="chat-messages"></div>
+            <div id="chat-input-area">
+              <input type="text" id="chat-input" placeholder="Digite..." maxlength="200" autocomplete="off">
+              <button id="chat-send" onclick="sendChatMessage()">></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/app.js?v=2"></script>
+</body>
+</html>
