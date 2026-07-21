@@ -241,10 +241,20 @@ app.use(passport.session());
 
 app.use(express.json());
 
-// ---------------------------------------------------------------------------
-// Arquivos estáticos
-// ---------------------------------------------------------------------------
-app.use(express.static(path.join(__dirname, '../public')));
+// Servir apenas os arquivos estáticos permitidos da raiz para segurança
+const ALLOWED_STATIC = ['/index.html', '/style.css', '/app.js', '/favicon.ico', '/favicon.png'];
+app.use((req, res, next) => {
+  if (ALLOWED_STATIC.includes(req.path)) {
+    return res.sendFile(path.join(__dirname, '..', req.path));
+  }
+  if (req.path.startsWith('/img/')) {
+    return res.sendFile(path.join(__dirname, '..', req.path));
+  }
+  next();
+});
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../index.html'));
+});
 
 // ---------------------------------------------------------------------------
 // Rotas de API
