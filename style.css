@@ -182,13 +182,13 @@ body.chat-open #tv-cabinet {
   content: "";
   position: absolute;
   inset: 0;
-  background: url('./img/tv_frame.png?v=2') no-repeat center / contain;
+  background: url('./img/tv_frame.png?v=3') no-repeat center / contain;
   z-index: 9;
   pointer-events: none;
 }
 
 #tv-cabinet.power-on::after {
-  background-image: url('./img/tv_frame_on.png?v=2') !important;
+  background-image: url('./img/tv_frame_on.png?v=3') !important;
 }
 
 /* Screen container positioned absolutely over the TV image green screen */
@@ -579,7 +579,7 @@ body.chat-open #tv-cabinet {
   width: 100% !important;
   aspect-ratio: 1 / 1 !important;
   height: auto !important;
-  background: url('./img/BtnOff.png?v=2') no-repeat center / contain !important;
+  background: url('./img/BtnOff.png?v=3') no-repeat center / contain !important;
   border: none !important;
   box-shadow: none !important;
   border-radius: 0 !important;
@@ -587,12 +587,12 @@ body.chat-open #tv-cabinet {
 }
 
 .tv-push-btn:active {
-  background: url('./img/BtnOn.png?v=2') no-repeat center / contain !important;
+  background: url('./img/BtnOn.png?v=3') no-repeat center / contain !important;
 }
 
 /* Latching push-pop pressed behavior */
 .tv-push-btn.pressed {
-  background: url('./img/BtnOn.png?v=2') no-repeat center / contain !important;
+  background: url('./img/BtnOn.png?v=3') no-repeat center / contain !important;
 }
 
 .tv-push-btn.logout {
@@ -657,7 +657,7 @@ body.chat-open #tv-cabinet {
   width: 100% !important;
   height: 100% !important;
   border-radius: 50% !important;
-  background-image: url('./img/DialN.png?v=2'); /* Allowed inline overrides */
+  background-image: url('./img/DialN.png?v=3'); /* Allowed inline overrides */
   background-size: contain !important;
   background-position: center !important;
   background-repeat: no-repeat !important;

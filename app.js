@@ -1005,8 +1005,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initNoiseCanvas();
 
-  // Inicializa estado de desligado
+  // Inicializa estado de desligado e knobs
   updatePowerState();
+  updateVolumeKnob();
+  const chKnob = $('#ch-knob');
+  if (chKnob) updateKnobImage(chKnob, currentChannel * 45);
 
   await syncTime();
   await loadChannels();
@@ -1109,14 +1112,14 @@ function getCardinalDirection(angle) {
 function updateKnobImage(knobElement, angle) {
   if (!knobElement) return;
   const dir = getCardinalDirection(angle);
-  knobElement.style.backgroundImage = `url('./img/Dial${dir}.png?v=2')`;
+  knobElement.style.backgroundImage = `url('./img/Dial${dir}.png?v=3')`;
 }
 
 function updateVolumeKnob() {
   const volKnob = $('#vol-knob');
   if (!volKnob) return;
   const dir = volDirections[volLevel];
-  volKnob.style.backgroundImage = `url('./img/Dial${dir}.png?v=2')`;
+  volKnob.style.backgroundImage = `url('./img/Dial${dir}.png?v=3')`;
   
   // Calculate volume percentage: Level 0=0%, 1=17%, 2=33%, 3=50%, 4=67%, 5=83%, 6=100%
   userVolume = Math.round(volLevel * (100 / 6));
