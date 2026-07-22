@@ -672,6 +672,10 @@ function renderChannelBar() {
 
 /* ---------- Socket.IO Chat ---------- */
 function connectSocket() {
+  if (typeof io === 'undefined') {
+    console.info('TV2: Socket.IO não disponível (modo estático).');
+    return;
+  }
   socket = io({ transports: ['websocket', 'polling'] });
 
   socket.on('connect', () => {
@@ -913,7 +917,7 @@ function startWatchdog() {
 /* ---------- Load Channels ---------- */
 async function loadChannels() {
   try {
-    const res = await fetch('/api/channels');
+    const res = await fetch('./data/channels.json');
     const data = await res.json();
     channels = Array.isArray(data) ? data : data.channels || [];
   } catch (err) {
@@ -1007,7 +1011,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await syncTime();
   await loadChannels();
 
-  checkAuth();
+  if (typeof checkAuth === 'function') checkAuth();
 
   renderChannelBar();
 

@@ -34,7 +34,7 @@
      Add class "img-mode" to #tv-cabinet to activate.
 
      Example:
-       #tv-cabinet { --tv-bg-image: url('/img/my-tv.png'); --screen-t: 10%; --screen-l: 8%; --screen-r: 8%; --screen-b: 25%; }
+       #tv-cabinet { --tv-bg-image: url('./img/my-tv.png'); --screen-t: 10%; --screen-l: 8%; --screen-r: 8%; --screen-b: 25%; }
   */
   --tv-bg-image: none;
   --tv-frame-ratio: 4 / 3;
@@ -182,13 +182,13 @@ body.chat-open #tv-cabinet {
   content: "";
   position: absolute;
   inset: 0;
-  background: url('/img/tv_frame.png?v=2') no-repeat center / contain;
+  background: url('./img/tv_frame.png?v=2') no-repeat center / contain;
   z-index: 9;
   pointer-events: none;
 }
 
 #tv-cabinet.power-on::after {
-  background-image: url('/img/tv_frame_on.png?v=2') !important;
+  background-image: url('./img/tv_frame_on.png?v=2') !important;
 }
 
 /* Screen container positioned absolutely over the TV image green screen */
@@ -579,7 +579,7 @@ body.chat-open #tv-cabinet {
   width: 100% !important;
   aspect-ratio: 1 / 1 !important;
   height: auto !important;
-  background: url('/img/BtnOff.png?v=2') no-repeat center / contain !important;
+  background: url('./img/BtnOff.png?v=2') no-repeat center / contain !important;
   border: none !important;
   box-shadow: none !important;
   border-radius: 0 !important;
@@ -587,12 +587,12 @@ body.chat-open #tv-cabinet {
 }
 
 .tv-push-btn:active {
-  background: url('/img/BtnOn.png?v=2') no-repeat center / contain !important;
+  background: url('./img/BtnOn.png?v=2') no-repeat center / contain !important;
 }
 
 /* Latching push-pop pressed behavior */
 .tv-push-btn.pressed {
-  background: url('/img/BtnOn.png?v=2') no-repeat center / contain !important;
+  background: url('./img/BtnOn.png?v=2') no-repeat center / contain !important;
 }
 
 .tv-push-btn.logout {
@@ -657,7 +657,7 @@ body.chat-open #tv-cabinet {
   width: 100% !important;
   height: 100% !important;
   border-radius: 50% !important;
-  background-image: url('/img/DialN.png?v=2'); /* Allowed inline overrides */
+  background-image: url('./img/DialN.png?v=2'); /* Allowed inline overrides */
   background-size: contain !important;
   background-position: center !important;
   background-repeat: no-repeat !important;
@@ -802,7 +802,7 @@ body.chat-open #tv-cabinet {
   aspect-ratio: 361 / 1184;
   top: 50%;
   transform: translateY(-24.8%);
-  background: url('/img/Flip_Chat_cropped.png') no-repeat center center;
+  background: url('./img/Flip_Chat_cropped.png') no-repeat center center;
   background-size: contain;
   filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.6));
 }
@@ -1354,7 +1354,7 @@ body.has-img-mode #img-mode-controls {
    SVG gerado via feTurbulence â€” plÃ¡stico ABS estipulado #505058
    ---------------------------------------------------------- */
 #control-panel {
-  background-image: url('/img/tv/panel-texture.svg');
+  background-image: url('./img/tv/panel-texture.svg');
   background-repeat: repeat;
   background-size: 128px 128px;
   background-color: #505058;
@@ -1367,17 +1367,17 @@ body.has-img-mode #img-mode-controls {
    ---------------------------------------------------------- */
 #layout-cycle-btn {
   background:
-    url('/img/tv/btn-dark.svg') no-repeat 0 0 / 100% 300%,
+    url('./img/tv/btn-dark.svg') no-repeat 0 0 / 100% 300%,
     linear-gradient(to bottom, #3a3a44, #26262f);
 }
 #layout-cycle-btn:hover:not(:active) {
   background:
-    url('/img/tv/btn-dark.svg') no-repeat 0 50% / 100% 300%,
+    url('./img/tv/btn-dark.svg') no-repeat 0 50% / 100% 300%,
     linear-gradient(to bottom, #464650, #323240);
 }
 #layout-cycle-btn:active {
   background:
-    url('/img/tv/btn-dark.svg') no-repeat 0 100% / 100% 300%,
+    url('./img/tv/btn-dark.svg') no-repeat 0 100% / 100% 300%,
     linear-gradient(to bottom, #1e1e28, #141420);
 }
 
