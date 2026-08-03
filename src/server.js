@@ -103,8 +103,40 @@ function getChannels() {
   return channelsCache;
 }
 
-function getNextItemTitleForChannel(ch, videoIdx, partIdx) {
-  const videos = ch.videos;
+// PRNG pseudo-aleatório determinístico (Mulberry32)
+function seededRandom(seed) {
+  let t = (seed += 0x6d2b79f5);
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+// Retorna a lista de vídeos embaralhada deterministicamente para o dia da semana (0-6)
+function getChannelVideosForDay(ch, channelIdx, dayOfWeek) {
+  if (!ch || !ch.videos || ch.videos.length === 0) return [];
+  const list = [...ch.videos];
+  let seed = (channelIdx + 1) * 10007 + (dayOfWeek + 1) * 7919;
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(seededRandom(seed++) * (i + 1));
+    const temp = list[i];
+    list[i] = list[j];
+    list[j] = temp;
+  }
+  return list;
+}
+
+// Remove os ~2.5 segundos de tela preta no final de cada vídeo
+function getItemDuration(item) {
+  if (!item) return 0;
+  const dur = item.dur || 0;
+  if (dur > 6) {
+    return Math.max(dur - 2.5, 4);
+  }
+  return dur;
+}
+
+function getNextItemTitleForChannel(ch, channelIdx, videoIdx, partIdx, dayOfWeek) {
+  const videos = getChannelVideosForDay(ch, channelIdx, dayOfWeek);
   if (!videos || videos.length === 0) return '—';
   
   const currentItem = videos[videoIdx];
@@ -127,45 +159,46 @@ function getNextItemTitleForChannel(ch, videoIdx, partIdx) {
   return '—';
 }
 
-function getPlaybackStateForChannel(channel, timestamp) {
+function getPlaybackStateForChannel(channel, channelIdx, timestamp) {
   if (!channel || !channel.videos || channel.videos.length === 0) return null;
 
-  const videos = channel.videos;
+  const date = new Date(timestamp);
+  const dayOfWeek = date.getUTCDay();
+  const startOfDay = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+
+  const videos = getChannelVideosForDay(channel, channelIdx, dayOfWeek);
+
   let totalDuration = 0;
   for (let i = 0; i < videos.length; i++) {
-    const item = videos[i];
-    totalDuration += item.dur;
+    totalDuration += getItemDuration(videos[i]);
   }
 
   if (totalDuration <= 0) return null;
 
-  // Meia-noite UTC do dia atual
-  const date = new Date(timestamp);
-  const startOfDay = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-  
   let position = Math.floor((timestamp - startOfDay) / 1000) % totalDuration;
   if (position < 0) position += totalDuration;
 
   for (let videoIdx = 0; videoIdx < videos.length; videoIdx++) {
     const item = videos[videoIdx];
-    const itemDur = item.dur;
+    const itemDur = getItemDuration(item);
 
     if (position < itemDur) {
       if (item.type === 'episode' && item.parts && item.parts.length > 0) {
         let partOffset = position;
         for (let partIdx = 0; partIdx < item.parts.length; partIdx++) {
           const part = item.parts[partIdx];
-          if (partOffset < part.dur) {
+          const partDur = getItemDuration(part);
+          if (partOffset < partDur) {
             return {
               videoIdx,
               partIdx,
               videoId: part.id,
               title: item.title + ' — ' + part.title,
-              nextTitle: getNextItemTitleForChannel(channel, videoIdx, partIdx),
+              nextTitle: getNextItemTitleForChannel(channel, channelIdx, videoIdx, partIdx, dayOfWeek),
               startSec: partOffset
             };
           }
-          partOffset -= part.dur;
+          partOffset -= partDur;
         }
         const lastPart = item.parts[item.parts.length - 1];
         return {
@@ -173,7 +206,7 @@ function getPlaybackStateForChannel(channel, timestamp) {
           partIdx: item.parts.length - 1,
           videoId: lastPart.id,
           title: item.title + ' — ' + lastPart.title,
-          nextTitle: getNextItemTitleForChannel(channel, videoIdx, item.parts.length - 1),
+          nextTitle: getNextItemTitleForChannel(channel, channelIdx, videoIdx, item.parts.length - 1, dayOfWeek),
           startSec: 0
         };
       } else {
@@ -182,7 +215,7 @@ function getPlaybackStateForChannel(channel, timestamp) {
           partIdx: 0,
           videoId: item.id,
           title: item.title || '',
-          nextTitle: getNextItemTitleForChannel(channel, videoIdx, 0),
+          nextTitle: getNextItemTitleForChannel(channel, channelIdx, videoIdx, 0, dayOfWeek),
           startSec: position
         };
       }

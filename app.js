@@ -119,12 +119,41 @@ async function syncTime() {
 }
 
 /* ---------- Playback State Calculation ---------- */
-function getItemDuration(item) {
-  return item.dur;
+
+// PRNG pseudo-aleatório determinístico (Mulberry32)
+function seededRandom(seed) {
+  let t = (seed += 0x6d2b79f5);
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }
 
-function getNextItemTitle(ch, videoIdx, partIdx) {
-  const videos = ch.videos;
+// Retorna a lista de vídeos embaralhada deterministicamente para o dia da semana (0-6)
+function getChannelVideosForDay(ch, channelIdx, dayOfWeek) {
+  if (!ch || !ch.videos || ch.videos.length === 0) return [];
+  const list = [...ch.videos];
+  let seed = (channelIdx + 1) * 10007 + (dayOfWeek + 1) * 7919;
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(seededRandom(seed++) * (i + 1));
+    const temp = list[i];
+    list[i] = list[j];
+    list[j] = temp;
+  }
+  return list;
+}
+
+// Remove os ~2.5s de tela preta no final de cada vídeo
+function getItemDuration(item) {
+  if (!item) return 0;
+  const dur = item.dur || 0;
+  if (dur > 6) {
+    return Math.max(dur - 2.5, 4);
+  }
+  return dur;
+}
+
+function getNextItemTitle(ch, channelIdx, videoIdx, partIdx, dayOfWeek) {
+  const videos = getChannelVideosForDay(ch, channelIdx, dayOfWeek);
   if (!videos || videos.length === 0) return '—';
   
   const currentItem = videos[videoIdx];
@@ -151,7 +180,12 @@ function getPlaybackState(channelIdx) {
   const ch = channels[channelIdx];
   if (!ch || !ch.videos || ch.videos.length === 0) return null;
 
-  const videos = ch.videos;
+  const now = new Date(getServerTime());
+  const dayOfWeek = now.getUTCDay();
+  const startOfDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+
+  const videos = getChannelVideosForDay(ch, channelIdx, dayOfWeek);
+
   let totalDuration = 0;
   for (let i = 0; i < videos.length; i++) {
     totalDuration += getItemDuration(videos[i]);
@@ -159,10 +193,6 @@ function getPlaybackState(channelIdx) {
 
   if (totalDuration <= 0) return null;
 
-  // Meia-noite UTC do dia atual baseado no relógio sincronizado
-  const now = new Date(getServerTime());
-  const startOfDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  
   let position = Math.floor((getServerTime() - startOfDay) / 1000) % totalDuration;
   if (position < 0) position += totalDuration;
 
@@ -175,17 +205,18 @@ function getPlaybackState(channelIdx) {
         let partOffset = position;
         for (let partIdx = 0; partIdx < item.parts.length; partIdx++) {
           const part = item.parts[partIdx];
-          if (partOffset < part.dur) {
+          const partDur = getItemDuration(part);
+          if (partOffset < partDur) {
             return {
               videoIdx: videoIdx,
               partIdx: partIdx,
               videoId: part.id,
               title: item.title + ' — ' + part.title,
-              nextTitle: getNextItemTitle(ch, videoIdx, partIdx),
+              nextTitle: getNextItemTitle(ch, channelIdx, videoIdx, partIdx, dayOfWeek),
               startSec: partOffset,
             };
           }
-          partOffset -= part.dur;
+          partOffset -= partDur;
         }
         const lastPart = item.parts[item.parts.length - 1];
         return {
@@ -193,7 +224,7 @@ function getPlaybackState(channelIdx) {
           partIdx: item.parts.length - 1,
           videoId: lastPart.id,
           title: item.title + ' — ' + lastPart.title,
-          nextTitle: getNextItemTitle(ch, videoIdx, item.parts.length - 1),
+          nextTitle: getNextItemTitle(ch, channelIdx, videoIdx, item.parts.length - 1, dayOfWeek),
           startSec: 0,
         };
       } else {
@@ -202,7 +233,7 @@ function getPlaybackState(channelIdx) {
           partIdx: 0,
           videoId: item.id,
           title: item.title || '',
-          nextTitle: getNextItemTitle(ch, videoIdx, 0),
+          nextTitle: getNextItemTitle(ch, channelIdx, videoIdx, 0, dayOfWeek),
           startSec: position,
         };
       }
@@ -1328,10 +1359,46 @@ function clearTvImage() {
   document.body.classList.remove('has-img-mode');
 }
 
-/* Keyboard shortcut: Alt+0 limpa image mode */
+/* Keyboard shortcuts */
 document.addEventListener('keydown', (e) => {
-  if (!e.altKey) return;
-  if (e.key === '0') { e.preventDefault(); clearTvImage(); }
+  if (e.altKey && e.key === '0') {
+    e.preventDefault();
+    clearTvImage();
+    return;
+  }
+
+  // Se o usuário estiver digitando em um campo de texto ou chat, ignora
+  const tag = e.target ? e.target.tagName : '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) {
+    return;
+  }
+
+  // Atalho 'Y' ou 'y': Abre o vídeo atual no YouTube em nova aba no segundo exato
+  if ((e.key === 'y' || e.key === 'Y') && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    let videoId = null;
+    let startSec = 0;
+
+    const state = getPlaybackState(currentChannel);
+    if (state && state.videoId) {
+      videoId = state.videoId;
+      startSec = Math.floor(state.startSec || 0);
+    } else if (player && player.getVideoData) {
+      try {
+        const vd = player.getVideoData();
+        if (vd && vd.video_id) {
+          videoId = vd.video_id;
+          if (player.getCurrentTime) {
+            startSec = Math.floor(player.getCurrentTime() || 0);
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (videoId) {
+      const ytUrl = `https://www.youtube.com/watch?v=${videoId}&t=${startSec}s`;
+      window.open(ytUrl, '_blank');
+    }
+  }
 });
 
 /* ---------- Fade-in de Áudio do YouTube ---------- */

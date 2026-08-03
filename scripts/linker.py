@@ -77,8 +77,13 @@ def err(msg):   print(f"{C.R}✗{C.END} {msg}")
 def head(msg):  print(f"\n{C.BOLD}{C.G}═══ {msg} ═══{C.END}")
 
 def prompt(msg, default=None):
+    if not sys.stdin.isatty():
+        return default or ""
     suffix = f" {C.GR}[{default}]{C.END}" if default else ""
-    val = input(f"{C.M}▶{C.END} {msg}{suffix}: ").strip()
+    try:
+        val = input(f"{C.M}▶{C.END} {msg}{suffix}: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        return default or ""
     return val or (default or "")
 
 # ═════════════════════════════════════════════════════════════
@@ -98,10 +103,7 @@ class YtDlpProvider(MetadataProvider):
             'quiet': True,
             'no_warnings': True,
             'skip_download': True,
-            'extract_flat': False,
-            'extractor_args': {
-                'youtube': {'player_client': ['ios']}
-            }
+            'extract_flat': False
         }
         if os.path.exists(COOKIE_FILE):
             self.opts['cookiefile'] = COOKIE_FILE
@@ -486,11 +488,7 @@ def process_playlist(provider, link):
         return []
     info(f"  ↳ {len(items)} vídeo(s) na playlist")
 
-    if len(items) > 100:  # Hardcoded instead of MAX_PLAYLIST_AUTO for safety
-        c = prompt(f"Playlist tem {len(items)} vídeos. Continuar?", "s")
-        if c.lower() not in ('s', 'sim', 'y', 'yes'):
-            return []
-
+    # Automatic processing without prompt
     videos = []
     for i, item in enumerate(items, 1):
         print(f"   [{i}/{len(items)}] {item['id']}... ", end='', flush=True)
