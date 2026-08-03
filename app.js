@@ -433,20 +433,10 @@ function setScreenRatio(w, h) {
 }
 
 async function advanceVideo() {
-  if (isPowerOn) {
-    showStaticOverlay('SINTONIZANDO...');
-  }
   const state = await getSyncPlaybackState(currentChannel);
-  
-  setTimeout(() => {
-    if (state) {
-      loadVideo(state);
-    } else {
-      if (isPowerOn) {
-        hideStaticOverlay();
-      }
-    }
-  }, 600);
+  if (state) {
+    loadVideo(state);
+  }
 }
 
 /* ---------- Channel Switching ---------- */
