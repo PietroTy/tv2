@@ -948,12 +948,20 @@ function startWatchdog() {
 /* ---------- Load Channels ---------- */
 async function loadChannels() {
   try {
-    const res = await fetch('./data/channels.json');
-    const data = await res.json();
-    channels = Array.isArray(data) ? data : data.channels || [];
+    const res = await fetch('./data/channels.json?t=' + Date.now());
+    if (res.ok) {
+      const data = await res.json();
+      channels = Array.isArray(data) ? data : data.channels || [];
+    } else {
+      throw new Error('HTTP ' + res.status);
+    }
   } catch (err) {
-    console.error('TV2: falha ao carregar canais', err);
-    channels = [];
+    if (typeof CHANNELS !== 'undefined') {
+      channels = CHANNELS;
+    } else {
+      console.error('TV2: falha ao carregar canais', err);
+      channels = [];
+    }
   }
 }
 
