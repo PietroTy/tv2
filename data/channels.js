@@ -1084,7 +1084,6 @@ const CHANNELS = [
       { type: "yt", id: "KmBxdh1epr8", title: "LOOK AT THIS 𝙲𝙰𝚃", dur: 230 },
       { type: "yt", id: "8L8TNBkUjmM", title: "SILENCE, 𝘉𝘙𝘈𝘕𝘋!", dur: 28 },
       { type: "yt", id: "R2JnC3gaCG0", title: "the earth is not for the pleasure of man", dur: 42 },
-      { type: "yt", id: "WoSBy0OT_sQ", title: "Through dreams, they influence mankind", dur: 100 },
       { type: "yt", id: "8-sZJ37QSpo", title: "There is no trolley problem", dur: 70 },
       { type: "yt", id: "WBmnIT5vKsM", title: "The normie is a sociopath", dur: 86 },
       { type: "yt", id: "z_F_eePBin4", title: "we found our god in the cement, and we cannot put him back", dur: 86 },
