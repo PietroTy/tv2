@@ -307,27 +307,26 @@ function startStaticToVideoTransition() {
 
   if (!isPowerOn) return;
 
-  // Se o chiado não estiver ativo (transição normal), ignora o delay
   if (dom.staticOverlay && !dom.staticOverlay.classList.contains('show')) {
     if (player && player.setVolume) player.setVolume(userVolume);
     return;
   }
 
-  // Regra geral: som do chiado sai ANTES do visual
-  staticAudioTimeout = setTimeout(() => {
-    if (!isPowerOn) return;
-    fadeOutNoiseSound(1200);
-    // Volume do YouTube entra com um leve atraso após o chiado começar a sumir
-    setTimeout(() => {
-      if (!isPowerOn) return;
-      fadeInYouTubeVolume(userVolume, 1500);
-    }, 800);
-  }, 3000);
+  // Fade-out rápido do ruído de áudio
+  fadeOutNoiseSound(400);
 
+  if (player && player.setVolume) {
+    try {
+      player.setVolume(userVolume);
+      player.unMute();
+    } catch (_) {}
+  }
+
+  // Esconder overlay estático e texto SINTONIZANDO após 1s
   staticVisualTimeout = setTimeout(() => {
     if (!isPowerOn) return;
     hideStaticOverlayOnly();
-  }, 5500);
+  }, 1000);
 }
 
 function onPlayerStateChange(event) {
@@ -529,6 +528,15 @@ function showStaticOverlay(text) {
       player.setVolume(0);
     } catch(e) {}
   }
+
+  // Safety fallback: se o vídeo já estiver tocando ou se a transição demorar, garante remoção em 2s
+  staticVisualTimeout = setTimeout(() => {
+    try {
+      if (player && player.getPlayerState && player.getPlayerState() === YT.PlayerState.PLAYING) {
+        hideStaticOverlayOnly();
+      }
+    } catch(e) {}
+  }, 2000);
 }
 
 function setTVVolume(vol) {
