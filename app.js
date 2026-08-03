@@ -312,21 +312,18 @@ function startStaticToVideoTransition() {
     return;
   }
 
-  // Fade-out rápido do ruído de áudio
-  fadeOutNoiseSound(400);
+  // O chiado começa a esvanecer suavemente aos 1.2s enquanto o volume do YouTube entra
+  staticAudioTimeout = setTimeout(() => {
+    if (!isPowerOn) return;
+    fadeOutNoiseSound(800);
+    fadeInYouTubeVolume(userVolume, 1000);
+  }, 1200);
 
-  if (player && player.setVolume) {
-    try {
-      player.setVolume(userVolume);
-      player.unMute();
-    } catch (_) {}
-  }
-
-  // Esconder overlay estático e texto SINTONIZANDO após 1s
+  // Esconder overlay estático e texto de sintonização aos 2.2s
   staticVisualTimeout = setTimeout(() => {
     if (!isPowerOn) return;
     hideStaticOverlayOnly();
-  }, 1000);
+  }, 2200);
 }
 
 function onPlayerStateChange(event) {
@@ -511,14 +508,14 @@ function showStaticOverlay(text) {
     } catch(e) {}
   }
 
-  // Safety fallback: se o vídeo já estiver tocando ou se a transição demorar, garante remoção em 2s
+  // Safety fallback: se o vídeo já estiver tocando ou se a transição demorar, garante remoção em 3.5s
   staticVisualTimeout = setTimeout(() => {
     try {
       if (player && player.getPlayerState && player.getPlayerState() === YT.PlayerState.PLAYING) {
         hideStaticOverlayOnly();
       }
     } catch(e) {}
-  }, 2000);
+  }, 3500);
 }
 
 function setTVVolume(vol) {
