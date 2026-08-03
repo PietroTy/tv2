@@ -892,8 +892,74 @@ function setupChatInput() {
   });
 }
 
+/* ---------- Suppress YouTube Ads ---------- */
+function checkAndSuppressAds() {
+  if (!started || !playerReady || !player || !isPowerOn) return;
+
+  try {
+    if (typeof player.getVideoData !== 'function') return;
+    const vd = player.getVideoData();
+    const state = getPlaybackState(currentChannel);
+
+    if (!vd || !state) return;
+
+    // Detecta se o conteúdo atual no player é um anúncio publicitário do YouTube
+    const isAd = Boolean(vd.isAd) || (vd.video_id && state.videoId && vd.video_id !== state.videoId);
+
+    if (isAd) {
+      // 1. Muta o áudio do anúncio instantaneamente
+      try {
+        player.mute();
+        player.setVolume(0);
+      } catch (_) {}
+
+      // 2. Esconde o anúncio visualmente
+      if (dom.playerWrap && dom.playerWrap.style.opacity !== '0') {
+        dom.playerWrap.style.opacity = '0';
+      }
+
+      // 3. Tenta avançar o player para pular o anúncio
+      try {
+        if (player.getCurrentTime && player.getDuration) {
+          const adDur = player.getDuration();
+          if (adDur > 0) {
+            player.seekTo(adDur + 1, true);
+          }
+        }
+      } catch (_) {}
+
+      // 4. Re-sincroniza com a transmissão real após 800ms
+      setTimeout(() => {
+        try {
+          const currentVd = player.getVideoData();
+          if (currentVd && (currentVd.isAd || currentVd.video_id !== state.videoId)) {
+            player.seekTo(state.startSec, true);
+          }
+        } catch (_) {}
+      }, 800);
+    } else {
+      // Quando não é anúncio: desmuta e reexibe o vídeo normal
+      if (isPowerOn && dom.playerWrap && player.getPlayerState && player.getPlayerState() === YT.PlayerState.PLAYING) {
+        const isStaticVisible = dom.staticOverlay && dom.staticOverlay.classList.contains('show');
+        if (!isStaticVisible) {
+          if (dom.playerWrap.style.opacity !== '1') {
+            dom.playerWrap.style.opacity = '1';
+          }
+          if (player.isMuted && player.isMuted()) {
+            player.unMute();
+            player.setVolume(userVolume);
+          }
+        }
+      }
+    }
+  } catch (_) {}
+}
+
 /* ---------- Watchdog ---------- */
 function startWatchdog() {
+  // Verificação constante de propaganda a cada 300ms
+  setInterval(checkAndSuppressAds, 300);
+
   setInterval(() => {
     if (!started || !playerReady || !player || !isPowerOn) return;
 
