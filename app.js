@@ -368,38 +368,18 @@ function onPlayerStateChange(event) {
   }
 }
 
-function onPlayerError() {
-  const ch = channels[currentChannel];
-  if (ch && ch.videos && ch.videos[currentVideoIdx]) {
-    const video = ch.videos[currentVideoIdx];
-    
-    getSyncPlaybackState(currentChannel).then(state => {
-      if (state && state.videoId) {
-        let partDur = video.dur;
-        if (video.type === 'episode' && video.parts && video.parts[currentPartIdx]) {
-          partDur = video.parts[currentPartIdx].dur;
-        }
-        
-        const remainingSec = partDur - state.startSec;
-        const remainingMs = Math.max(0, remainingSec * 1000);
-        
-        console.warn('TV2: Vídeo falhou (bloqueado/restrito). Aguardando ' + remainingSec + 's sincronizado com o servidor...');
-        
-        if (isPowerOn) {
-          showStaticOverlay('SINAL FRACO');
-        }
-        
-        clearTimeout(errorTimeout);
-        errorTimeout = setTimeout(() => {
-          advanceVideo();
-        }, remainingMs + 1000); // Tenta o próximo com 1s de margem
-      } else {
-        setTimeout(() => advanceVideo(), 3000);
-      }
-    });
-  } else {
-    setTimeout(() => advanceVideo(), 3000);
+function onPlayerError(e) {
+  const errCode = e ? e.data : '';
+  console.warn('TV2: Vídeo indisponível ou com restrição de exibição (código: ' + errCode + '). Avançando para o próximo vídeo...');
+  
+  if (isPowerOn) {
+    showStaticOverlay('SEM SINAL / INDISPONÍVEL');
   }
+  
+  clearTimeout(errorTimeout);
+  errorTimeout = setTimeout(() => {
+    advanceVideo();
+  }, 2500);
 }
 
 /* ---------- Video Loading ---------- */
@@ -426,6 +406,18 @@ function loadVideo(state) {
 
   applyVideoRatio(state.videoId);
   startNowPlayingLoop(state.title, state.nextTitle);
+
+  clearTimeout(autoplayCheckTimeout);
+  autoplayCheckTimeout = setTimeout(() => {
+    if (!isPowerOn || !player || !player.getPlayerState) return;
+    try {
+      const st = player.getPlayerState();
+      if (st !== YT.PlayerState.PLAYING && st !== YT.PlayerState.BUFFERING) {
+        console.warn('TV2: Vídeo travado sem reprodução. Avançando para o próximo...');
+        advanceVideo();
+      }
+    } catch(_) {}
+  }, 4000);
 }
 
 /* Detecta o aspect-ratio real do vídeo via oEmbed e aplica ao CSS (Desativado: proporção fixa) */
