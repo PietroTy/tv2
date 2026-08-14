@@ -1,8 +1,22 @@
-cookies.txt
+# Dependencies
 node_modules/
+
+# Secrets & Local Env
 .env
+.env.local
+starttvserver.sh
+
+# Runtime Logs & PIDs
+.backend.log
+.backend.pid
+.tunnel.log
+.tunnel.pid
+*.log
+*.pid
+cookies.txt
 .sessions.json
+
+# Cache
 __pycache__/
 *.pyc
-
-
+.DS_Store
