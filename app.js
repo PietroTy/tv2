@@ -3,6 +3,11 @@
    Televisão sincronizada com chat ao vivo
    ============================================================ */
 
+/* ---------- Backend URL ---------- */
+const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? ''
+  : (window.location.origin.includes('magiktarot.com.br') ? '' : 'https://tv2-api.magiktarot.com.br');
+
 /* ---------- State ---------- */
 let channels = [];
 let currentChannel = 0;
@@ -28,6 +33,7 @@ let userInteracted = false;
 let isPowerOn = false;
 let powerOnTimeout = null;
 let errorTimeout = null;
+let isAdActive = false;
 
 
 /* ---------- DOM Refs ---------- */
@@ -107,7 +113,7 @@ function getServerTime() {
 async function syncTime() {
   try {
     const t0 = Date.now();
-    const res = await fetch('/api/time');
+    const res = await fetch((BACKEND_URL || '') + '/api/time');
     const data = await res.json();
     const t1 = Date.now();
     const rtt = (t1 - t0) / 2;
@@ -247,7 +253,7 @@ function getPlaybackState(channelIdx) {
 
 async function getSyncPlaybackState(channelIdx) {
   try {
-    const res = await fetch('/api/playback/' + channelIdx);
+    const res = await fetch((BACKEND_URL || '') + '/api/playback/' + channelIdx);
     if (res.ok) {
       const state = await res.json();
       if (state && state.videoId !== undefined) {
@@ -312,24 +318,25 @@ function startStaticToVideoTransition() {
     return;
   }
 
-  // O chiado começa a esvanecer suavemente aos 1.2s enquanto o volume do YouTube entra
+  // O chiado cobre todo o início do vídeo onde o HUD do YouTube aparece (~4.8s)
   staticAudioTimeout = setTimeout(() => {
     if (!isPowerOn) return;
-    fadeOutNoiseSound(800);
-    fadeInYouTubeVolume(userVolume, 1000);
-  }, 1200);
+    fadeOutNoiseSound(1000);
+    fadeInYouTubeVolume(userVolume, 1200);
+  }, 3800);
 
-  // Esconder overlay estático e texto de sintonização aos 2.2s
+  // Esconder overlay estático e texto de sintonização aos 4.8s
   staticVisualTimeout = setTimeout(() => {
     if (!isPowerOn) return;
     hideStaticOverlayOnly();
-  }, 2200);
+  }, 4800);
 }
 
 function onPlayerStateChange(event) {
   const state = event.data;
 
   if (state === YT.PlayerState.ENDED) {
+    showStaticOverlay('ENCERRANDO...');
     if (dom.playerWrap) dom.playerWrap.style.opacity = '0';
     advanceVideo();
   }
@@ -370,7 +377,7 @@ function onPlayerError(e) {
   console.warn('TV2: Vídeo indisponível ou com restrição de exibição (código: ' + errCode + '). Avançando para o próximo vídeo...');
   
   if (isPowerOn) {
-    showStaticOverlay('SEM SINAL / INDISPONÍVEL');
+    showStaticOverlay('SEM SINAL');
   }
   
   clearTimeout(errorTimeout);
@@ -457,7 +464,7 @@ function switchChannel(idx) {
   }
 
   if (isPowerOn) {
-    showStaticOverlay(label.toUpperCase());
+    showStaticOverlay('SINTONIZANDO...');
     triggerFlash();
     showChannelHUD(label);
 
@@ -508,14 +515,14 @@ function showStaticOverlay(text) {
     } catch(e) {}
   }
 
-  // Safety fallback: se o vídeo já estiver tocando ou se a transição demorar, garante remoção em 3.5s
+  // Safety fallback: se o vídeo já estiver tocando ou se a transição demorar, garante remoção em 6.5s
   staticVisualTimeout = setTimeout(() => {
     try {
       if (player && player.getPlayerState && player.getPlayerState() === YT.PlayerState.PLAYING) {
         hideStaticOverlayOnly();
       }
     } catch(e) {}
-  }, 3500);
+  }, 6500);
 }
 
 function setTVVolume(vol) {
@@ -694,7 +701,8 @@ function connectSocket() {
     console.info('TV2: Socket.IO não disponível (modo estático).');
     return;
   }
-  socket = io({ transports: ['websocket', 'polling'] });
+  const socketOpts = { transports: ['websocket', 'polling'], withCredentials: true };
+  socket = BACKEND_URL ? io(BACKEND_URL, socketOpts) : io(socketOpts);
 
   socket.on('connect', () => {
     if (started) {
@@ -822,11 +830,11 @@ function userColor(name) {
 let isLoggedIn = false;
 
 function loginGoogle() {
-  window.location.href = '/auth/google';
+  window.location.href = (BACKEND_URL || '') + '/auth/google';
 }
 
 function logoutUser() {
-  fetch('/auth/logout', { credentials: 'same-origin' })
+  fetch((BACKEND_URL || '') + '/auth/logout', { credentials: 'include' })
     .then(() => {
       window.location.reload();
     })
@@ -847,7 +855,7 @@ function handleAuthClick() {
 
 async function checkAuth() {
   try {
-    const res = await fetch('/auth/me', { credentials: 'same-origin' });
+    const res = await fetch((BACKEND_URL || '') + '/auth/me', { credentials: 'include' });
     if (!res.ok) throw new Error('Não autenticado');
     const data = await res.json();
 
@@ -904,18 +912,27 @@ function checkAndSuppressAds() {
     const isAd = Boolean(vd.isAd) || (vd.video_id && state.videoId && vd.video_id !== state.videoId);
 
     if (isAd) {
+      isAdActive = true;
+
       // 1. Muta o áudio do anúncio instantaneamente
       try {
         player.mute();
         player.setVolume(0);
       } catch (_) {}
 
-      // 2. Esconde o anúncio visualmente
+      // 2. Esconde o vídeo do anúncio visualmente
       if (dom.playerWrap && dom.playerWrap.style.opacity !== '0') {
         dom.playerWrap.style.opacity = '0';
       }
 
-      // 3. Tenta avançar o player para pular o anúncio
+      // 3. Mostra o chiado estático tampando o anúncio com o texto "VEICULANDO ANÚNCIO..."
+      if (dom.staticOverlay && !dom.staticOverlay.classList.contains('show')) {
+        showStaticOverlay('VEICULANDO ANÚNCIO...');
+      } else if (dom.staticText && dom.staticText.textContent !== 'VEICULANDO ANÚNCIO...') {
+        dom.staticText.textContent = 'VEICULANDO ANÚNCIO...';
+      }
+
+      // 4. Tenta avançar o player para pular o anúncio automaticamente
       try {
         if (player.getCurrentTime && player.getDuration) {
           const adDur = player.getDuration();
@@ -925,7 +942,7 @@ function checkAndSuppressAds() {
         }
       } catch (_) {}
 
-      // 4. Re-sincroniza com a transmissão real após 800ms
+      // Re-sincroniza com a transmissão real após 500ms
       setTimeout(() => {
         try {
           const currentVd = player.getVideoData();
@@ -933,18 +950,26 @@ function checkAndSuppressAds() {
             player.seekTo(state.startSec, true);
           }
         } catch (_) {}
-      }, 800);
+      }, 500);
     } else {
-      // Quando não é anúncio: desmuta e reexibe o vídeo normal
-      if (isPowerOn && dom.playerWrap && player.getPlayerState && player.getPlayerState() === YT.PlayerState.PLAYING) {
-        const isStaticVisible = dom.staticOverlay && dom.staticOverlay.classList.contains('show');
-        if (!isStaticVisible) {
-          if (dom.playerWrap.style.opacity !== '1') {
-            dom.playerWrap.style.opacity = '1';
-          }
-          if (player.isMuted && player.isMuted()) {
-            player.unMute();
-            player.setVolume(userVolume);
+      // Quando o anúncio termina ou é pulado
+      if (isAdActive) {
+        isAdActive = false;
+        if (isPowerOn) {
+          startStaticToVideoTransition();
+        }
+      } else {
+        // Se não for anúncio, desmuta e reexibe o vídeo normal quando a estática já tiver sido removida
+        if (isPowerOn && dom.playerWrap && player.getPlayerState && player.getPlayerState() === YT.PlayerState.PLAYING) {
+          const isStaticVisible = dom.staticOverlay && dom.staticOverlay.classList.contains('show');
+          if (!isStaticVisible) {
+            if (dom.playerWrap.style.opacity !== '1') {
+              dom.playerWrap.style.opacity = '1';
+            }
+            if (player.isMuted && player.isMuted()) {
+              player.unMute();
+              player.setVolume(userVolume);
+            }
           }
         }
       }
@@ -1001,7 +1026,7 @@ function startWatchdog() {
 /* ---------- Load Channels ---------- */
 async function loadChannels() {
   try {
-    const res = await fetch('./data/channels.json?t=' + Date.now());
+    const res = await fetch((BACKEND_URL || '') + '/api/channels?t=' + Date.now());
     if (res.ok) {
       const data = await res.json();
       channels = Array.isArray(data) ? data : data.channels || [];
@@ -1009,11 +1034,19 @@ async function loadChannels() {
       throw new Error('HTTP ' + res.status);
     }
   } catch (err) {
-    if (typeof CHANNELS !== 'undefined') {
-      channels = CHANNELS;
-    } else {
-      console.error('TV2: falha ao carregar canais', err);
-      channels = [];
+    try {
+      const localRes = await fetch('./data/channels.json?t=' + Date.now());
+      if (localRes.ok) {
+        const data = await localRes.json();
+        channels = Array.isArray(data) ? data : data.channels || [];
+      } else throw new Error();
+    } catch (_) {
+      if (typeof CHANNELS !== 'undefined') {
+        channels = CHANNELS;
+      } else {
+        console.error('TV2: falha ao carregar canais', err);
+        channels = [];
+      }
     }
   }
 }
@@ -1516,7 +1549,7 @@ function updatePowerState() {
     
     const ch = channels[currentChannel];
     const label = (ch && (ch.label || ch.name)) ? (ch.label || ch.name) : 'CH ' + String(currentChannel + 1).padStart(2, '0');
-    showStaticOverlay(label.toUpperCase());
+    showStaticOverlay('SINTONIZANDO...');
     triggerFlash();
     showChannelHUD(label);
     

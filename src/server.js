@@ -14,7 +14,12 @@ const PORT = process.env.PORT || 3000;
 const app = express();
 app.enable('trust proxy');
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: true,
+    credentials: true
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Sessão persistente (arquivo JSON — sem dependências extras)
@@ -274,13 +279,30 @@ app.use(passport.session());
 
 app.use(express.json());
 
-// Servir apenas os arquivos estáticos permitidos da raiz para segurança
+// Configuração de CORS para chamadas de API e túnel Cloudflare
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
+// Servir apenas os arquivos estáticos permitidos para segurança
 const ALLOWED_STATIC = ['/index.html', '/style.css', '/app.js', '/favicon.ico', '/favicon.png'];
 app.use((req, res, next) => {
   if (ALLOWED_STATIC.includes(req.path)) {
     return res.sendFile(path.join(__dirname, '..', req.path));
   }
-  if (req.path.startsWith('/img/')) {
+  if (req.path.startsWith('/img/') || (req.path.startsWith('/data/') && !req.path.includes('.sessions'))) {
     return res.sendFile(path.join(__dirname, '..', req.path));
   }
   next();
@@ -388,18 +410,22 @@ function getViewerCount(roomName) {
 
 io.on('connection', (socket) => {
   socket.on('join-channel', ({ channel }) => {
-    // Sair de todas as salas de canal anteriores
+    // Sair de todas as salas de canal anteriores e notificar
+    const previousRooms = [];
     for (const room of socket.rooms) {
       if (room !== socket.id && room.startsWith('channel-')) {
+        previousRooms.push(room);
         socket.leave(room);
       }
     }
+    previousRooms.forEach((oldRoom) => {
+      io.to(oldRoom).emit('viewer-count', getViewerCount(oldRoom));
+    });
 
     const roomName = `channel-${channel}`;
     socket.join(roomName);
 
     // Emitir contagem atualizada para a sala após entrar
-    // Pequeno atraso para garantir que o socket já está na sala
     setTimeout(() => {
       const count = getViewerCount(roomName);
       io.to(roomName).emit('viewer-count', count);
