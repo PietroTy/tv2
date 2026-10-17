@@ -6,7 +6,7 @@
 /* ---------- Backend URL ---------- */
 const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? ''
-  : (window.location.origin.includes('magiktarot.com.br') ? '' : 'https://tv2-api.magiktarot.com.br');
+  : (window.location.hostname.startsWith('tv2-api.') ? '' : 'https://tv2-api.pietroty.com.br');
 
 /* ---------- State ---------- */
 let channels = [];
